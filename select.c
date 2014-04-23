@@ -63,7 +63,7 @@ int main(int argc, char **argv)
         }
     }
 
-    printf("\n\nSocket connectoins completed!\nClient: %d\t\tServer: %d\n", next_node_socket, server_socket);
+    printf("\n\nSocket connections completed!\nClient: %d\t\tServer: %d\n", next_node_socket, server_socket);
 
     printf("Starting network...\n");
 
