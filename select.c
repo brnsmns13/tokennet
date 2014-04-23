@@ -13,6 +13,8 @@ int main(int argc, char **argv)
     if(argc != 5)
     {
         printf("usage: ./tokennet [node_name] [node_port] [next_node] [next_port]\n");
+        printf("To send a message: At any time enter a single character address and press return."
+        " Enter a message (up to 80 characters) to send to specified address and press return");
         return 0;
     }
 
@@ -101,7 +103,7 @@ void start_network()
         if (FD_ISSET(STDIN_FILENO, &rset)) {
             // Get message from user to send
             frame = get_user_input();
-            printf("Sending frame: %s", frame);
+            // printf("Sending frame: %s", frame);
             send(next_node_socket, frame, strlen(frame), NULL);
             n--;
         }
@@ -112,10 +114,19 @@ void start_network()
            len = recv(server_socket, in_buf, 88, NULL);
            if(len > 0)
            {
-               printf("RECV FRAME: %d\n", len);
-               printf("\tsrc addr: %c\n", in_buf[5]);
-               printf("\tdst addr: %c\n", in_buf[4]);
-               printf("\tmsg: %s\n", in_buf + 6);
+               // Check if the frame is for this address
+               if(in_buf[4] == node_name)
+               {
+                   printf("RECV FRAME: %d\n", len);
+                   printf("\tsrc addr: %c\n", in_buf[5]);
+                   printf("\tdst addr: %c\n", in_buf[4]);
+                   printf("\tmsg: %s\n", in_buf + 6);
+               }
+               else
+               {
+                   // Forward the frame
+                   send(next_node_socket, in_buf, strlen(in_buf), NULL);
+               }
            }
            else if (len < 0)
            {
@@ -140,12 +151,9 @@ char* get_user_input()
     // Declare variables for user input
     char dest[24] = {0};
     char msg[81] = {0};
-    printf("Enter destinaton: ");
-    fflush(stdout);
     fgets(dest, 24, stdin);
-    printf("Enter Message:\n");
-    fflush(stdout);
-    fgets(msg, 81, stdin);
+    printf("Enter message for address %c:\n", dest[0]);
+    fgets(msg, 80, stdin);
 
     return create_frame(dest[0], msg);
 }
@@ -167,6 +175,10 @@ char* create_frame(char dest, char* msg)
 
     // copy message into frame
     int msg_size = strlen(msg);
+    if(msg_size > 80)
+    {
+        msg_size = 80;
+    }
     strncpy(frame + 6, msg, msg_size);
 
     // set end frame
