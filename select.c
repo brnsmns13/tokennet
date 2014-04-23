@@ -66,6 +66,9 @@ int main(int argc, char **argv)
     printf("Starting network...\n");
 
     start_network();
+    // Close sockets
+    close(server_socket);
+    close(next_node_socket);
     printf("Complete!\n");
     return 0;
 }
@@ -114,9 +117,15 @@ void start_network()
                printf("\tdst addr: %c\n", in_buf[4]);
                printf("\tmsg: %s\n", in_buf + 6);
            }
+           else if (len < 0)
+           {
+               printf("Error: %d\n", len);
+           }
            else
            {
-               printf("NO DATA: %d", len);
+               printf("Client disconnected!\n");
+
+               return;
            }
 
            // clear the recv buffer
@@ -129,8 +138,8 @@ void start_network()
 char* get_user_input()
 {
     // Declare variables for user input
-    char dest[24];
-    char msg[81];
+    char dest[24] = {0};
+    char msg[81] = {0};
     printf("Enter destinaton: ");
     fflush(stdout);
     fgets(dest, 24, stdin);
@@ -138,7 +147,7 @@ char* get_user_input()
     fflush(stdout);
     fgets(msg, 81, stdin);
 
-    return create_frame(dest, msg);
+    return create_frame(dest[0], msg);
 }
 
 char* create_frame(char dest, char* msg)
