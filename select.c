@@ -54,19 +54,17 @@ int main(int argc, char **argv)
         }
 
         printf("Client: %d\t\tServer: %d\n", next_node_socket, server_socket);
-        sleep(2);
+        sleep(1);
         if((next_node_socket > 0) && (server_socket > 0))
         {
             break;
         }
-        // Wait 2 seconds before repeating
-        //sleep(2);
     }
 
     printf("\n\nSocket connectoins completed!\nClient: %d\t\tServer: %d\n", next_node_socket, server_socket);
 
     printf("Starting network...\n");
-    //sleep(10);
+
     start_network();
     printf("Complete!\n");
     return 0;
@@ -83,32 +81,48 @@ void start_network()
     in_buf = malloc(sizeof(char) * 88);
     frame = malloc(sizeof(char) * 88);
 
+    fd_set rset;
+    int n;
+
     // Make server socket non-blocking
     fcntl(server_socket, F_SETFL, O_NONBLOCK);
 
     while(1)
     {
-        // Get message from user to send
-        frame = get_user_input();
-        printf("Sending frame: %s", frame);
-        send(next_node_socket, frame, strlen(frame), NULL);
+        // Set up file descriptors for select use
+        FD_ZERO(&rset);
+        FD_SET(STDIN_FILENO, &rset);
+        FD_SET(server_socket, &rset);
+        n = select((server_socket>STDIN_FILENO? server_socket:STDIN_FILENO)+1, &rset, NULL, NULL, NULL);
 
-        // Check for data in the recv buffer
-        len = recv(server_socket, in_buf, 88, NULL);
-        if(len > 0)
-        {
-            printf("RECV FRAME: %d\n", len);
-            printf("\tsrc addr: %c\n", in_buf[5]);
-            printf("\tdst addr: %c\n", in_buf[4]);
-            printf("\tmsg: %s\n", in_buf + 6);
-        }
-        else
-        {
-            printf("NO DATA: %d", len);
+        if (FD_ISSET(STDIN_FILENO, &rset)) {
+            // Get message from user to send
+            frame = get_user_input();
+            printf("Sending frame: %s", frame);
+            send(next_node_socket, frame, strlen(frame), NULL);
+            n--;
         }
 
-        // clear the recv buffer
-        memset(in_buf, 0, 88);
+        /* check for ready data from the communication channel */
+       if ((n > 0 ) && (FD_ISSET(server_socket, &rset)) ) {
+           // Check for data in the recv buffer
+           len = recv(server_socket, in_buf, 88, NULL);
+           if(len > 0)
+           {
+               printf("RECV FRAME: %d\n", len);
+               printf("\tsrc addr: %c\n", in_buf[5]);
+               printf("\tdst addr: %c\n", in_buf[4]);
+               printf("\tmsg: %s\n", in_buf + 6);
+           }
+           else
+           {
+               printf("NO DATA: %d", len);
+           }
+
+           // clear the recv buffer
+           memset(in_buf, 0, 88);
+
+        }
     }
 }
 
@@ -172,8 +186,6 @@ int Server(int port)
 
     otherlength = sizeof(otheraddr);
     fd = accept(s, &otheraddr, &otherlength);
-
-    fprintf(stdout, "Connected");
 
     return(fd);
 }
